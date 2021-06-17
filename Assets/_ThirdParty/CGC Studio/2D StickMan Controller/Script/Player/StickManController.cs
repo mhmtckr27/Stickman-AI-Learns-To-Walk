@@ -6,6 +6,7 @@ using static GameManager;
 public class StickManController : MonoBehaviour
 {
 	public static int musclesCount;
+	public static int movableMusclesCount;
 	public _Muscle[] muscles = new _Muscle [7];
     [HideInInspector]
 	public bool right;
@@ -23,8 +24,6 @@ public class StickManController : MonoBehaviour
 	public _Muscle RIGHTLEG;
 	public _Muscle LEFTLEG;
 
-
-
 	public List<_Muscle> movableMuscles = new List<_Muscle>();
 
 	public Vector2 WalkRightVector = new Vector2(1,0);
@@ -39,6 +38,9 @@ public class StickManController : MonoBehaviour
 	public KeyCode LeftInput = KeyCode.LeftArrow; 
 	public KeyCode RightInput = KeyCode.RightArrow;
 
+	public List<Vector3> childLocations;
+	public List<Quaternion> childRotations;
+
 	private Individual individual;
 
 	public Individual Individual
@@ -46,16 +48,34 @@ public class StickManController : MonoBehaviour
 		get => individual;
 		set
 		{
-			individual = value;
-			individual.stickman = this;
+			if(value == null)
+			{
+				individual.stickman = null;
+				individual = null;
+			}
+			else
+			{
+				individual = value;
+				individual.stickman = this;
+			}
 		}
 	}
 
 	private void Awake()
 	{
-		movableMuscles.Add(LEFTLEG);
+		//movableMuscles.Add(LEFTLEG);
 		movableMuscles.Add(RIGHTLEG);
 		musclesCount = muscles.Length;
+		movableMusclesCount = movableMuscles.Count;
+
+		childLocations = new List<Vector3>();
+		childRotations = new List<Quaternion>();
+
+		for (int i = 0; i < transform.childCount; ++i)
+		{
+			childLocations.Add(transform.GetChild(i).localPosition);
+			childRotations.Add(transform.GetChild(i).localRotation);
+		}
 	}
 
 	private void Start() {
@@ -63,11 +83,11 @@ public class StickManController : MonoBehaviour
 	}
     // Update is called once per frame
     private void Update()
-    {	
-		/*foreach(_Muscle muscle in muscles)
+    {
+		foreach (_Muscle muscle in muscles)
 		{
-			muscle.ActiveMuscle(muscle.RootRotation, muscle.force);
-		}*/
+			muscle.ActiveMuscle();
+		}
 		
 		if (CanControllerNow)
 		{
@@ -93,28 +113,49 @@ public class StickManController : MonoBehaviour
 		}
 		
 
-		/*while(right == true && left == false && Time.time > MoveDelayPointer)
+		while(right == true && left == false && Time.time > MoveDelayPointer)
 		{
-			Invoke("Step1Right",0f);
+			RIGHTLEG.bone.MoveRotation(Mathf.LerpAngle(RIGHTLEG.bone.rotation, -60, 1000 * Time.deltaTime));
+			RIGHTLEG.bone.AddForce(new Vector2(10, 0), ForceMode2D.Impulse);
+			//LEFTLEG.bone.AddForce(new Vector2(60, 0) * -0.5f, ForceMode2D.Impulse);
 			//Invoke("Step1RightArm",0f);
 			//Invoke("Step2Right",0.085f);
+
 			MoveDelayPointer = Time.time  + MoveDelay;
-		}*/
-		/*while(left == true && right == false && Time.time > MoveDelayPointer)
+		}
+		while(left == true && right == false && Time.time > MoveDelayPointer)
 		{
-			Invoke("Step1Left",0f);
-			Invoke("Step1LeftArm",0f);
+			LEFTLEG.bone.MoveRotation(Mathf.LerpAngle(LEFTLEG.bone.rotation, 60, 1000 * Time.deltaTime));
+			LEFTLEG.bone.AddForce(new Vector2(-10, 0), ForceMode2D.Impulse);
+			//RIGHTLEG.bone.AddForce(new Vector2(-60, 0) * -0.5f, ForceMode2D.Impulse);
 			//Invoke("Step2left",0.085f);
 			MoveDelayPointer = Time.time  + MoveDelay;
-		}*/
+		}
     }
 
-	public void Step(int muscleIndex, float rotation, float multiplierForce)
+	public void Balance(int muscleIndex)
 	{
-		muscles[muscleIndex].ActiveMuscle(rotation, multiplierForce);
+		movableMuscles[muscleIndex].ActiveMuscle();
 	}
 
+	public void Step(int muscleIndex, Vector2 rotation, float multiplierForce)
+	{
+		movableMuscles[muscleIndex].ApplyForce(rotation, multiplierForce);
+		/*if(muscleIndex == 0)
+		{
+			movableMuscles[1].ApplyForce(rotation * -0.5f, multiplierForce);
+		}
+		else
+		{
+			movableMuscles[0].ApplyForce(rotation * -0.5f, multiplierForce);
+		}*/
+	}
 
+	public void Step2(int muscleIndex, Vector2 addForceVector, float moveRotationRotation, float moveRotationLerpMultiplier)
+	{
+		movableMuscles[muscleIndex].bone.MoveRotation(Mathf.LerpAngle(movableMuscles[muscleIndex].bone.rotation, moveRotationRotation, moveRotationLerpMultiplier * Time.deltaTime));
+		movableMuscles[muscleIndex].bone.AddForce(addForceVector, ForceMode2D.Impulse);
+	}
 }
 [System.Serializable]
 public class _Muscle
@@ -123,10 +164,16 @@ public class _Muscle
 	public float RootRotation;
 	public float force = 1000f;
 
-	public void ActiveMuscle(float rot, float forc)
+	public void ActiveMuscle()
 	{
-		bone.MoveRotation(Mathf.LerpAngle(bone.rotation, rot, forc * Time.deltaTime));
+		bone.MoveRotation(Mathf.LerpAngle(bone.rotation, RootRotation, force * Time.deltaTime));
 	}
+
+	public void ApplyForce(Vector2 rot, float forc)
+	{
+		bone.AddForce(rot * 0.25f * forc, ForceMode2D.Impulse);
+	}
+
 	public _Muscle (Transform t)
 	{
 		bone = t.GetComponent<Rigidbody2D>();

@@ -1003,7 +1003,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &57471308446241959
 Transform:
   m_ObjectHideFlags: 0
@@ -1464,35 +1464,23 @@ MonoBehaviour:
   muscles:
   - bone: {fileID: 941255700517660695}
     RootRotation: 0
-    force: 100
+    force: 40
   - bone: {fileID: 941255700433948233}
     RootRotation: 0
-    force: 200
+    force: 100
   - bone: {fileID: 941255702200094383}
     RootRotation: 0
-    force: 200
+    force: 100
   - bone: {fileID: 941255701985218397}
-    RootRotation: 10
+    RootRotation: 0
     force: 100
   - bone: {fileID: 941255700450313304}
     RootRotation: 0
     force: 100
   - bone: {fileID: 941255701488631370}
-    RootRotation: -10
+    RootRotation: 0
     force: 100
   - bone: {fileID: 941255701505704752}
-    RootRotation: 0
-    force: 100
-  - bone: {fileID: 941255701870794411}
-    RootRotation: 10
-    force: 100
-  - bone: {fileID: 941255701349412845}
-    RootRotation: 0
-    force: 100
-  - bone: {fileID: 941255700803215033}
-    RootRotation: -10
-    force: 100
-  - bone: {fileID: 941255700283047809}
     RootRotation: 0
     force: 100
   right: 0
@@ -1501,18 +1489,20 @@ MonoBehaviour:
   rbRIGHTLEG: {fileID: 941255701488631370}
   rbLEFTLEG: {fileID: 941255701985218397}
   RIGHTLEG:
-    bone: {fileID: 941255701985218397}
+    bone: {fileID: 941255701505704752}
     RootRotation: 0
     force: 0
   LEFTLEG:
-    bone: {fileID: 941255701488631370}
+    bone: {fileID: 941255700450313304}
     RootRotation: 0
     force: 0
   movableMuscles: []
   WalkRightVector: {x: 60, y: 0}
-  MoveDelay: 0.2
+  MoveDelay: 0.1
   LeftInput: 276
   RightInput: 275
+  childLocations: []
+  childRotations: []
 --- !u!114 &1075615021416301844
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1542,7 +1532,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &57471309224851803
 Transform:
   m_ObjectHideFlags: 0
