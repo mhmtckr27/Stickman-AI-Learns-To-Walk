@@ -5,6 +5,7 @@ using static GameManager;
 
 public class StickManController : MonoBehaviour
 {
+	public Jump playerHipJumpScript;
 	public static int musclesCount;
 	public static int movableMusclesCount;
 	public _Muscle[] muscles = new _Muscle [7];
@@ -63,19 +64,22 @@ public class StickManController : MonoBehaviour
 
 	private void Awake()
 	{
-		//movableMuscles.Add(LEFTLEG);
-		movableMuscles.Add(RIGHTLEG);
+		/*movableMuscles.Add(LEFTLEG);
+		movableMuscles.Add(RIGHTLEG);*/
 		musclesCount = muscles.Length;
 		movableMusclesCount = movableMuscles.Count;
 
 		childLocations = new List<Vector3>();
 		childRotations = new List<Quaternion>();
 
-		for (int i = 0; i < transform.childCount; ++i)
+		Transform[] childTransforms = GetComponentsInChildren<Transform>();
+
+		for (int i = 0; i < childTransforms.Length; ++i)
 		{
-			childLocations.Add(transform.GetChild(i).localPosition);
-			childRotations.Add(transform.GetChild(i).localRotation);
+			childLocations.Add(childTransforms[i].position);
+			childRotations.Add(childTransforms[i].rotation);
 		}
+		Debug.LogError(childLocations.Count);
 	}
 
 	private void Start() {
@@ -133,9 +137,12 @@ public class StickManController : MonoBehaviour
 		}
     }
 
-	public void Balance(int muscleIndex)
+	public void Balance()
 	{
-		movableMuscles[muscleIndex].ActiveMuscle();
+		foreach (_Muscle muscle in muscles)
+		{
+			muscle.ActiveMuscle();
+		}
 	}
 
 	public void Step(int muscleIndex, Vector2 rotation, float multiplierForce)
@@ -153,8 +160,12 @@ public class StickManController : MonoBehaviour
 
 	public void Step2(int muscleIndex, Vector2 addForceVector, float moveRotationRotation, float moveRotationLerpMultiplier)
 	{
-		movableMuscles[muscleIndex].bone.MoveRotation(Mathf.LerpAngle(movableMuscles[muscleIndex].bone.rotation, moveRotationRotation, moveRotationLerpMultiplier * Time.deltaTime));
-		movableMuscles[muscleIndex].bone.AddForce(addForceVector, ForceMode2D.Impulse);
+		//movableMuscles[muscleIndex].bone.MoveRotation(Mathf.LerpAngle(movableMuscles[muscleIndex].RootRotation, moveRotationRotation, moveRotationLerpMultiplier * Time.deltaTime));
+		if (playerHipJumpScript.Grounded)
+		{
+			movableMuscles[muscleIndex].bone.AddForce(addForceVector, ForceMode2D.Impulse);
+		}
+		Debug.LogError(movableMuscles[muscleIndex].bone);
 	}
 }
 [System.Serializable]

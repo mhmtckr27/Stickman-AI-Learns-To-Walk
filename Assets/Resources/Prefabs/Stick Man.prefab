@@ -1489,11 +1489,11 @@ MonoBehaviour:
   rbRIGHTLEG: {fileID: 941255701488631370}
   rbLEFTLEG: {fileID: 941255701985218397}
   RIGHTLEG:
-    bone: {fileID: 941255701505704752}
+    bone: {fileID: 941255701488631370}
     RootRotation: 0
     force: 0
   LEFTLEG:
-    bone: {fileID: 941255700450313304}
+    bone: {fileID: 941255701985218397}
     RootRotation: 0
     force: 0
   movableMuscles: []

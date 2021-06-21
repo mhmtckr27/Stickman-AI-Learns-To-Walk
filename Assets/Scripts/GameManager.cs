@@ -1,31 +1,108 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
 	[SerializeField] private GameObject stickmanPrefab;
 	[SerializeField] private const float maxRotationAngle = 10;
-	private const int minBoneForce = 0;
-	private const float maxBoneForce = 40f;
+	private const float minBoneForce = 0f;
+	private const float maxBoneForce = 30f;
+	private const float minForceRotationX = 0f;
+	private const float maxForceRotationX = 20f;
 	[SerializeField] private Vector3 startPos;
 	[SerializeField] private int chromosomeLength = 1000;
 	[SerializeField] private int populationCount = 1000;
 	[SerializeField] private int selectCount = 30;
 	[SerializeField] private int generationCount = 100;
 	[SerializeField] private int mutationCount = 3;
+	[SerializeField] private CGCCameraFollow followerCamera;
+	[SerializeField] private Text currentGenerationText;
+	[SerializeField] private Text bestScoreOfCurrentGenText;
+	[SerializeField] private Text bestScoreOfAllGensText;
 
-	public int currentGeneration;
+	private int currentGeneration;
+	public int CurrentGeneration
+	{
+		get => currentGeneration;
+		set
+		{
+			currentGeneration = value;
+			currentGenerationText.text = "Generation: " + currentGeneration;
+		}
+	}
+
+	private float bestScoreOfCurrentGen;
+	public float BestScoreOfCurrentGen
+	{
+		get => bestScoreOfCurrentGen;
+		set
+		{
+			bestScoreOfCurrentGen = value;
+			bestScoreOfCurrentGenText.text = "Best Score of Current Gen: \t" + bestScoreOfCurrentGen; 
+		}
+	}
+	private float bestScoreOfAllGens;
+	public float BestScoreOfAllGens
+	{
+		get => bestScoreOfAllGens;
+		set
+		{
+			bestScoreOfAllGens = value;
+			bestScoreOfAllGensText.text = "Best Score of All Gens: \t\t" + bestScoreOfAllGens; 
+		}
+	}
+
+
 	List<Individual> population;
 	List<StickManController> stickmen;
+
+	bool isAlgorithmRunning = false;
+
 
 	private void Start()
 	{
 	}
 
+	private void Update()
+	{
+		if(isAlgorithmRunning == false) { return; }
+		foreach(Individual individual in population)
+		{
+			foreach (SpriteRenderer spriteRenderer in individual.stickman.GetComponentsInChildren<SpriteRenderer>())
+			{
+				Color color = spriteRenderer.color;
+				color = Color.white;
+				color.a = 0.1f;
+				spriteRenderer.color = color;
+			}
+		}
+	}
+
+	private void LateUpdate()
+	{
+		if(isAlgorithmRunning == false) { return; }
+		sort(population, 0, population.Count - 1);
+		foreach(SpriteRenderer spriteRenderer in population[population.Count - 1].stickman.GetComponentsInChildren<SpriteRenderer>())
+		{
+			Color color = spriteRenderer.color;
+			color = Color.green;
+			color.a = 1;
+			spriteRenderer.color = color;
+			followerCamera.Player = population[population.Count - 1].stickman.transform.GetChild(2).gameObject;
+			BestScoreOfCurrentGen = population[population.Count - 1].fitness;
+			if(BestScoreOfCurrentGen > BestScoreOfAllGens)
+			{
+				BestScoreOfAllGens = BestScoreOfCurrentGen;
+			}
+			//spriteRenderer.enabled = true;
+		}
+	}
+
 	public void OnRunButton()
 	{
-		CreateStickmen();
+		StartCoroutine(CreateStickmen());
 		StartCoroutine(InitFirstGeneration());
 	}
 
@@ -37,34 +114,21 @@ public class GameManager : MonoBehaviour
 		}
 	}
 
-	private void CreateStickmen()
+	private IEnumerator CreateStickmen()
 	{
 		stickmen = new List<StickManController>();
-		for (int i = 0; i < populationCount; ++i)
-		{
-			stickmen.Add(Instantiate(stickmanPrefab, startPos, Quaternion.identity).GetComponent<StickManController>());
-		}
+		/*for (int i = 0; i < populationCount; ++i)
+		{*/
+			StartCoroutine(CreateStickmanRoutine());
+		//}
 
-		for (int i = 0; i < stickmen.Count; ++i)
-		{
-			Collider2D[] colliders1 = stickmen[i].GetComponentsInChildren<Collider2D>();
-			for (int j = i + 1; j < stickmen.Count; ++j)
-			{
-				Collider2D[] colliders2 = stickmen[j].GetComponentsInChildren<Collider2D>();
-				StartCoroutine(IgnoreCollisionRoutine(colliders1, colliders2));
-			}
-		}
+		Physics2D.IgnoreLayerCollision(6, 6);
+		yield return null;
 	}
 
-	IEnumerator IgnoreCollisionRoutine(Collider2D[] colliders1, Collider2D[] colliders2)
+	IEnumerator CreateStickmanRoutine()
 	{
-		for (int k = 0; k < colliders1.Length; ++k)
-		{
-			for (int m = 0; m < colliders2.Length; ++m)
-			{
-				Physics2D.IgnoreCollision(colliders1[k], colliders2[m]);
-			}
-		}
+		stickmen.Add(Instantiate(stickmanPrefab, startPos, Quaternion.identity).GetComponent<StickManController>());
 		yield return null;
 	}
 
@@ -72,31 +136,31 @@ public class GameManager : MonoBehaviour
 	{
 		for(int i = 0; i < populationCount; ++i)
 		{
-			stickmen[i].transform.position = startPos;
-			stickmen[i].transform.rotation = Quaternion.identity;
 			stickmen[i].Individual = null;
-			for(int j = 0; j < stickmen[i].transform.childCount; ++j)
+			Transform[] childTransforms = stickmen[i].GetComponentsInChildren<Transform>();
+			for(int j = 0; j < childTransforms.Length; ++j)
 			{
-				stickmen[i].transform.GetChild(j).localPosition = stickmen[i].childLocations[j];
-				stickmen[i].transform.GetChild(j).localRotation = stickmen[i].childRotations[j];
+				childTransforms[j].position = stickmen[i].childLocations[j];
+				childTransforms[j].rotation = stickmen[i].childRotations[j];
 			}
+		}
+		for(int i = 0; i < populationCount; ++i)
+		{
+			stickmen[i].gameObject.SetActive(true);
 		}
 	}
 
 	private IEnumerator InitFirstGeneration()
 	{
-		currentGeneration = 1;
+		CurrentGeneration = 1;
 		population = new List<Individual>();
 
 		for (int i = 0; i < populationCount; ++i)
 		{
 			population.Add(GenerateRandomChromosome());
 			stickmen[i].Individual = population[i];
-			for (int j = 0; j < StickManController.musclesCount; ++j)
-			{
-				stickmen[i].muscles[j].force = population[i].forces[j];
-			}
 		}
+		isAlgorithmRunning = true;
 		yield return StartCoroutine(CalculateFitnesses(population));
 		yield return StartCoroutine(GeneticAlgorithm());
 	}
@@ -104,7 +168,7 @@ public class GameManager : MonoBehaviour
 	private IEnumerator GeneticAlgorithm()
 	{
 		Debug.Log("Population Count: " + population.Count);
-		while (currentGeneration < generationCount)
+		while (CurrentGeneration < generationCount)
 		{
 			Debug.Log("Population Count: " + population.Count);
 			//DestroyStickmen();
@@ -116,11 +180,7 @@ public class GameManager : MonoBehaviour
 			for(int i = population.Count; i < populationCount; ++i)
 			{
 				population.Add(GenerateRandomChromosome());
-				stickmen[i].Individual = population[i];
-				for (int j = 0; j < StickManController.musclesCount; ++j)
-				{
-					stickmen[i].muscles[j].force = population[i].forces[j];
-				}
+				//stickmen[i].Individual = population[i];
 			}
 
 			for(int i = 0; i < population.Count; i++)
@@ -131,14 +191,10 @@ public class GameManager : MonoBehaviour
 			for(int i = 0; i < population.Count; ++i)
 			{
 				stickmen[i].Individual = population[i];
-				for(int j = 0; j < StickManController.musclesCount; ++j)
-				{
-					stickmen[i].muscles[j].force = population[i].forces[j];
-				}
 			}
 
 			yield return StartCoroutine(CalculateFitnesses(population));
-			currentGeneration++;
+			CurrentGeneration++;
 		}
 		yield return null;
 	}
@@ -170,13 +226,18 @@ public class GameManager : MonoBehaviour
 	{
 		for(int i = 0; i < chromosomeLength; ++i)
 		{
+			/*for (int j = 0; j < StickManController.musclesCount; ++j)
+			{
+				individual.stickman.muscles[j].force = individual.chromosome[i].forces[j];
+			}*/
 			if (individual.isDead)
 			{
 				break;
 			}
 			yield return StartCoroutine(individual.Move(individual.chromosome[i]));
+			individual.fitness += individual.chromosome[i].addForceVector.x;
 		}
-		individual.fitness = individual.stickman.transform.GetChild(0).position.x;
+		Debug.LogError(individual.fitness);
 		individual.isFitnessCalculationFinished = true;
 		if (individual.isDead)
 		{
@@ -228,11 +289,6 @@ public class GameManager : MonoBehaviour
 
 		Individual newIndividual = new Individual(chromosomeLength, stickmanPrefab, startPos);
 
-		for (int i = 0; i < StickManController.musclesCount; ++i)
-		{
-			newIndividual.forces.Add(Random.Range(minBoneForce, maxBoneForce));
-		}
-
 		newIndividual.chromosome.AddRange(individual1.chromosome.GetRange(0, newLengthChromosome_1));
 		newIndividual.chromosome.AddRange(individual2.chromosome.GetRange(newLengthChromosome_1, newLengthChromosome_2));
 		newIndividual.chromosome.AddRange(individual1.chromosome.GetRange(newLengthChromosome_2, newLengthChromosome_3));
@@ -244,7 +300,7 @@ public class GameManager : MonoBehaviour
 	{
 		for (int i = 0; i < mutationCount; ++i)
 		{
-			individual.chromosome[Random.Range(0, individual.chromosome.Count)] = GenerateRandomGene(individual);
+			individual.chromosome[Random.Range(0, individual.chromosome.Count)] = GenerateRandomGene(Random.Range(0, 2));
 		}
 	}
 
@@ -254,15 +310,9 @@ public class GameManager : MonoBehaviour
 
 		//individual.stickman = stickman;
 
-		for(int i = 0; i < StickManController.musclesCount; ++i)
-		{
-			individual.forces.Add(Random.Range(minBoneForce, maxBoneForce));
-		}
-
 		for (int i = 0; i < chromosomeLength; ++i)
 		{
-			Gene gene = GenerateRandomGene(individual);
-			
+			Gene gene = GenerateRandomGene(i % 2);
 			individual.chromosome.Add(gene);
 		}
 
@@ -270,22 +320,27 @@ public class GameManager : MonoBehaviour
 	}
 
 
-	public Gene GenerateRandomGene(Individual individual)
+	public Gene GenerateRandomGene(int muscleIndex)
 	{
-		int muscleIndex = Random.Range(0, StickManController.movableMusclesCount);
-		float rotationX = Random.Range(0f, 10f);
-		//float rotationY = Random.Range(0f, 60f);
-		float moveRotationRotation = Random.Range(0, 30f);
+		//muscleIndex = Random.Range(0, StickManController.movableMusclesCount);
+		float rotationX = Random.Range(maxForceRotationX, maxForceRotationX);
+		float rotationY = Random.Range(0f, 0f);
+		float moveRotationRotation = Random.Range(0, 120f);
 		/*if(muscleIndex == 0)
 		{
-			rotationX *= -1;
+			//rotationX *= -1;
 			moveRotationRotation *= -1;
 		}*/
-		float moveRotationLerpMultiplier = Random.Range(100, 300f);
+		float moveRotationLerpMultiplier = Random.Range(300, 600f);
 
-		Vector2 addForceVector = new Vector2(rotationX, 0 /*rotationY*/);
+		Vector2 addForceVector = new Vector2(rotationX, rotationY);
 
-		return new Gene(muscleIndex, /*new Vector2(10,0), 60, 1000 */addForceVector, moveRotationRotation, moveRotationLerpMultiplier);
+		Gene gene = new Gene(muscleIndex, /*new Vector2(10,0), 60, 1000 */addForceVector, moveRotationRotation, moveRotationLerpMultiplier);
+		for (int j = 0; j < StickManController.musclesCount; ++j)
+		{
+			gene.forces.Add(Random.Range(minBoneForce, maxBoneForce));
+		}
+		return gene;
 	}
 
 
@@ -308,8 +363,11 @@ public class GameManager : MonoBehaviour
 
 		public IEnumerator Move(Gene gene)
 		{
-			yield return new WaitForSeconds(0.2f);
+			yield return new WaitForSeconds(0.25f);
+			//stickman.Balance();
 			stickman.Step2(gene.muscleIndex, gene.addForceVector, gene.moveRotationRotation, gene.moveRotationLerpMultiplier);
+			//stickman.Balance();
+
 		}
 
 	}

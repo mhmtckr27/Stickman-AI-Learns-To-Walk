@@ -12,6 +12,7 @@ public class CGCCameraFollow : MonoBehaviour
 
     void FixedUpdate()
     {
+		if (!Player) { return; }
        Vector3 desiredPosition = Player.transform.position + Offset;
        Vector3 smoothedPosition = Vector3.Lerp(transform.position,desiredPosition,smoothSpeed);
 
