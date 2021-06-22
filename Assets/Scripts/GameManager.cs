@@ -54,6 +54,8 @@ public class GameManager : MonoBehaviour
 	[SerializeField] private Text currentGenerationText;
 	[SerializeField] private Text bestScoreOfCurrentGenText;
 	[SerializeField] private Text bestScoreOfAllGensText;
+	[SerializeField] private Text bestReachedOfCurrentGenText;
+	[SerializeField] private Text bestReachedOfAllGensText;
 	[SerializeField] private Text timeRemainingText;
 	[SerializeField] private GameObject parametersScreen;
 	[SerializeField] private GameObject closeApplicationConfirmationPanel;
@@ -121,6 +123,27 @@ public class GameManager : MonoBehaviour
 		{
 			bestScoreOfAllGens = value;
 			bestScoreOfAllGensText.text = "Best of All: \t\t" + bestScoreOfAllGens.ToString("F3"); 
+		}
+	}
+	
+	private float bestReachedOfCurrentGen;
+	public float BestReachedOfCurrentGen
+	{
+		get => bestReachedOfCurrentGen;
+		set
+		{
+			bestReachedOfCurrentGen = value;
+			bestReachedOfCurrentGenText.text = "This Reached:\t" + bestReachedOfCurrentGen.ToString("F3"); 
+		}
+	}
+	private float bestReachedOfAllGens;
+	public float BestReachedOfAllGens
+	{
+		get => bestReachedOfAllGens;
+		set
+		{
+			bestReachedOfAllGens = value;
+			bestReachedOfAllGensText.text = "Best Reached:\t" + bestReachedOfAllGens.ToString("F3"); 
 		}
 	}
 
@@ -385,17 +408,17 @@ public class GameManager : MonoBehaviour
 	{
 		if (stoppingConditionBools[2])
 		{
-			Debug.LogError("maxgen");
+			//Debug.LogError("maxgen");
 			return CurrentGeneration >= maxGenerationCount;
 		}
 		else if (stoppingConditionBools[1])
 		{
-			Debug.LogError("desfit");
+			//Debug.LogError("desfit");
 			return BestScoreOfAllGens >= desiredFitness;
 		}
 		else
 		{
-			Debug.LogError("reached50");
+			//Debug.LogError("reached50");
 			return BestScoreOfAllGens >= 1f;
 		}
 	}
@@ -411,20 +434,22 @@ public class GameManager : MonoBehaviour
 			stickman.muscles[i].force = stickman.Individual.forces[i];
 		}
 
-		float before = Time.time;
-
 		for (int i = 0; i < chromosomeLength; ++i)
 		{
 			yield return StartCoroutine(best.Move(best.chromosome[i]));
+			BestReachedOfCurrentGen = best.stickman.playerHipJumpScript.transform.position.x;
 			BestScoreOfCurrentGen = (best.stickman.playerHipJumpScript.transform.position.x / 50f);
 			//moveBackgroundMasterScript.MoveAll(best.stickman.playerHipJumpScript.transform.position.x);
 			if (BestScoreOfCurrentGen > BestScoreOfAllGens)
 			{
 				BestScoreOfAllGens = BestScoreOfCurrentGen;
 			}
+			if(BestReachedOfCurrentGen > BestReachedOfAllGens)
+			{
+				BestReachedOfAllGens = BestReachedOfCurrentGen;
+			}
 		}
-		float after = Time.time;
-		Debug.LogError(after - before);
+		//Debug.LogError(after - before);
 	}
 
 	private IEnumerator CalculateFitnesses(List<Individual> population)
