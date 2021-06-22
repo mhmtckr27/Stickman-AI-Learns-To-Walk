@@ -6,14 +6,14 @@ using UnityEngine.UI;
 public class GameManager : MonoBehaviour
 {
 	private const float defEachGenerationLastsSeconds = 15f;
-	private const float defMinBalanceForce = 100f;
-	private const float defMaxBalanceForce = 1000f;
-	private const float defMinMoveForce = -20f;
-	private const float defMaxMoveForce = 20f;
-	private const int defPopulationCount = 2500;
+	private const float defMinBalanceForce = -50f;
+	private const float defMaxBalanceForce = 50f;
+	private const float defMinMoveForce = 0f;
+	private const float defMaxMoveForce = 25f;
+	private const int defPopulationCount = 1000;
 	private const float defMutationPercentage = 0.03663f;
-	private const float defBodyBalanceFitnessWeight = 0.1f;
-	private const float defDistanceTraveledFitnessWeight = 0.9f;
+	private const float defBodyBalanceFitnessWeight = 0.99f;
+	private const float defDistanceTraveledFitnessWeight = 0.01f;
 	private const float defDesiredFitness = 0.95f;
 	private const int defMaxGenerationCount = 100000;
 	private const bool defStopIfReached50MetersIn15Seconds = true;
@@ -24,7 +24,6 @@ public class GameManager : MonoBehaviour
 	[SerializeField] private GameObject stickmanPrefab;
 	[SerializeField] private CGCCameraFollow followerCamera;
 	[SerializeField] private Vector3 startPos;
-	[SerializeField] private int chromosomeLength;
 
 	private float eachGenerationLastsSeconds;
 	private float minBalanceForce;
@@ -33,6 +32,7 @@ public class GameManager : MonoBehaviour
 	private float maxMoveForce;
 	private int populationCount;
 	private int selectCount;
+	private int chromosomeLength;
 	private int mutationCount;
 	private float bodyBalanceFitnessWeight;
 	private float distanceTraveledFitnessWeight;
@@ -49,8 +49,7 @@ public class GameManager : MonoBehaviour
 	[Header("UI")]
 	[SerializeField] private Button settingsButton;
 	[SerializeField] private Button runButton;
-	[SerializeField] private Color[] runButtonColors;
-	[SerializeField] private Text runButtonText;
+	[SerializeField] private Sprite[] runButtonSprites;
 	[SerializeField] private Text currentGenerationText;
 	[SerializeField] private Text bestScoreOfCurrentGenText;
 	[SerializeField] private Text bestScoreOfAllGensText;
@@ -203,7 +202,12 @@ public class GameManager : MonoBehaviour
 		RestoreDefaults();
 	}
 
-	public void OnToggleValueChanged(Toggle toggle)
+	public void OnExtraMotivationToggleChange(Toggle toggle)
+	{
+
+	}
+
+	public void OnStoppingConditionsToggleValueChanged(Toggle toggle)
 	{
 		if (!toggle.isOn) { return; }
 
@@ -312,28 +316,23 @@ public class GameManager : MonoBehaviour
 		settingsButton.interactable = false;
 		BestScoreOfAllGens = 0;
 		BestScoreOfCurrentGen = 0;
+		BestReachedOfCurrentGen = 0;
+		BestReachedOfAllGens = 0f;
 		CurrentGeneration = 1;
 		CurrentRemainingTime = initialTimeRemaining;
 		followerCamera.Player = stickman.transform.GetChild(2).gameObject;
 		StartCoroutine(InitFirstGeneration());
-		runButton.GetComponent<Image>().color = runButtonColors[1];
-		runButtonText.text = "Stop";
+		runButton.GetComponent<Image>().sprite = runButtonSprites[1];
 		isAlgorithmRunning = true;
 	}
 
 	private void StopRunning()
 	{
 		StopAllCoroutines();
-		runButton.GetComponent<Image>().color = runButtonColors[0];
-		runButtonText.text = "Start";
+		runButton.GetComponent<Image>().sprite = runButtonSprites[0];
 		isAlgorithmRunning = false;
 		settingsButton.interactable = true;
-	}
-
-	private void DestroyStickman()
-	{
-		Destroy(stickman.gameObject);
-	}
+	} 
 
 	private IEnumerator CreateStickman()
 	{
@@ -486,7 +485,7 @@ public class GameManager : MonoBehaviour
 		individual.fitness /= StickManController.musclesCount;
 		individual.fitness /= maxBalanceForce;
 		individual.fitness *= bodyBalanceFitnessWeight;
-
+		
 		for(int i = 0; i < chromosomeLength; ++i)
 		{
 			/*for (int j = 0; j < StickManController.musclesCount; ++j)
@@ -546,8 +545,14 @@ public class GameManager : MonoBehaviour
 		newIndividual.chromosome.AddRange(individual2.chromosome.GetRange(newLengthChromosome_1, newLengthChromosome_2));
 		newIndividual.chromosome.AddRange(individual1.chromosome.GetRange(newLengthChromosome_2, newLengthChromosome_3));
 
-		newIndividual.forces.AddRange(individual1.forces.GetRange(0, individual1.forces.Count / 2));
-		newIndividual.forces.AddRange(individual2.forces.GetRange(individual1.forces.Count / 2, individual1.forces.Count - newIndividual.forces.Count));
+		if(individual1.forces[0] > individual2.forces[0])
+		{
+			newIndividual.forces.AddRange(individual1.forces);
+		}
+		else
+		{
+			newIndividual.forces.AddRange(individual2.forces);
+		}
 
 		return newIndividual;
 	}
@@ -571,9 +576,11 @@ public class GameManager : MonoBehaviour
 			Gene gene = GenerateRandomGene(i % 2);
 			individual.chromosome.Add(gene);
 		}
+
+		float randomForce = Random.Range(minBalanceForce, maxBalanceForce);
 		for (int j = 0; j < StickManController.musclesCount; ++j)
 		{
-			individual.forces.Add(Random.Range(minBalanceForce, maxBalanceForce));
+			individual.forces.Add(randomForce);
 		}
 		return individual;
 	}
