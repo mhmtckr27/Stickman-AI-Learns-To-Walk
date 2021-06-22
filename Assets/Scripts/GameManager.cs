@@ -5,22 +5,92 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
+	private const float defEachGenerationLastsSeconds = 15f;
+	private const float defMinBalanceForce = 100f;
+	private const float defMaxBalanceForce = 1000f;
+	private const float defMinMoveForce = -20f;
+	private const float defMaxMoveForce = 20f;
+	private const int defPopulationCount = 2500;
+	private const float defMutationPercentage = 0.03663f;
+	private const float defBodyBalanceFitnessWeight = 0.1f;
+	private const float defDistanceTraveledFitnessWeight = 0.9f;
+	private const float defDesiredFitness = 0.95f;
+	private const int defMaxGenerationCount = 100000;
+	private const bool defStopIfReached50MetersIn15Seconds = true;
+	private const bool defStopIfReachedDesiredFitness = false;
+	private const bool defStopIfReachedMaxGenerationCount = false;
+
+
 	[SerializeField] private GameObject stickmanPrefab;
-	[SerializeField] private const float maxRotationAngle = 10;
-	private const float minBoneForce = 0f;
-	private const float maxBoneForce = 30f;
-	private const float minForceRotationX = 0f;
-	private const float maxForceRotationX = 20f;
-	[SerializeField] private Vector3 startPos;
-	[SerializeField] private int chromosomeLength = 1000;
-	[SerializeField] private int populationCount = 1000;
-	[SerializeField] private int selectCount = 30;
-	[SerializeField] private int generationCount = 100;
-	[SerializeField] private int mutationCount = 3;
 	[SerializeField] private CGCCameraFollow followerCamera;
+	[SerializeField] private Vector3 startPos;
+	[SerializeField] private int chromosomeLength;
+
+	private float eachGenerationLastsSeconds;
+	private float minBalanceForce;
+	private float maxBalanceForce;
+	private float minMoveForce;
+	private float maxMoveForce;
+	private int populationCount;
+	private int selectCount;
+	private int mutationCount;
+	private float bodyBalanceFitnessWeight;
+	private float distanceTraveledFitnessWeight;
+	private float desiredFitness;
+	private int maxGenerationCount;
+
+	private List<bool> stoppingConditionBools;
+	/*
+	private bool stopIfReached50MetersIn15Seconds;
+	private bool stopIfReachedDesiredFitness;
+	private bool stopIfReachedMaxGenerationCount;
+	*/
+	[Space]
+	[Header("UI")]
+	[SerializeField] private Button settingsButton;
+	[SerializeField] private Button runButton;
+	[SerializeField] private Color[] runButtonColors;
+	[SerializeField] private Text runButtonText;
 	[SerializeField] private Text currentGenerationText;
 	[SerializeField] private Text bestScoreOfCurrentGenText;
 	[SerializeField] private Text bestScoreOfAllGensText;
+	[SerializeField] private Text timeRemainingText;
+	[SerializeField] private GameObject parametersScreen;
+	[SerializeField] private GameObject closeApplicationConfirmationPanel;
+
+	[Space]
+	[Header("Parameters Panel UI")]
+	[SerializeField] private InputField eachGenerationLastsSecondsInputField;
+	[SerializeField] private InputField minBalanceForceInputField;
+	[SerializeField] private InputField maxBalanceForceInputField;
+	[SerializeField] private InputField minMoveForceInputField;
+	[SerializeField] private InputField maxMoveForceInputField;
+	[SerializeField] private InputField populationCountInputField;
+	[SerializeField] private InputField mutationPercentageInputField;
+	[SerializeField] private InputField bodyBalanceFitnessWeightInputField;
+	[SerializeField] private InputField distanceTraveledFitnessWeightInputField;
+	[SerializeField] private List<Toggle> stoppingConditionToggles;
+	[SerializeField] private InputField desiredFitnessInputField;
+	[SerializeField] private InputField maxGenerationCountInputField;
+
+	private float initialTimeRemaining = 15f;
+	private float currentRemainingTime;
+	public float CurrentRemainingTime
+	{
+		get => currentRemainingTime;
+		set
+		{
+			if(value < 0)
+			{
+				currentRemainingTime = 0;
+			}
+			else
+			{
+				currentRemainingTime = value;
+			}
+			timeRemainingText.text = currentRemainingTime.ToString("F1");
+		}
+	}
 
 	private int currentGeneration;
 	public int CurrentGeneration
@@ -29,7 +99,7 @@ public class GameManager : MonoBehaviour
 		set
 		{
 			currentGeneration = value;
-			currentGenerationText.text = "Generation: " + currentGeneration;
+			currentGenerationText.text = "Generation: \t\t" + currentGeneration;
 		}
 	}
 
@@ -40,7 +110,7 @@ public class GameManager : MonoBehaviour
 		set
 		{
 			bestScoreOfCurrentGen = value;
-			bestScoreOfCurrentGenText.text = "Best Score of Current Gen: \t" + bestScoreOfCurrentGen; 
+			bestScoreOfCurrentGenText.text = "Best of This: \t" + bestScoreOfCurrentGen.ToString("F3"); 
 		}
 	}
 	private float bestScoreOfAllGens;
@@ -50,104 +120,216 @@ public class GameManager : MonoBehaviour
 		set
 		{
 			bestScoreOfAllGens = value;
-			bestScoreOfAllGensText.text = "Best Score of All Gens: \t\t" + bestScoreOfAllGens; 
+			bestScoreOfAllGensText.text = "Best of All: \t\t" + bestScoreOfAllGens.ToString("F3"); 
 		}
 	}
 
 
 	List<Individual> population;
-	List<StickManController> stickmen;
+	StickManController stickman;
 
 	bool isAlgorithmRunning = false;
-
+	bool shouldStartTimer = false;
 
 	private void Start()
 	{
+		stoppingConditionBools = new List<bool>();
+		for(int i = 0; i < stoppingConditionToggles.Count; ++i)
+		{
+			stoppingConditionBools.Add(stoppingConditionToggles[i].isOn);
+		}
+		RestoreParameters();
+		StartCoroutine(CreateStickman());
 	}
 
 	private void Update()
 	{
 		if(isAlgorithmRunning == false) { return; }
-		foreach(Individual individual in population)
+		if (shouldStartTimer == false) { return; }
+		CurrentRemainingTime -= Time.deltaTime;
+	}
+
+	#region UI
+	public void OnSettingsButton()
+	{
+		parametersScreen.SetActive(true);
+	}
+
+	public void OnCloseSettingsButton()
+	{
+		parametersScreen.SetActive(false);
+	}
+
+	public void OnCloseApplicationButton()
+	{
+		closeApplicationConfirmationPanel.SetActive(true);
+	}
+
+	public void OnConfirmationPanelNoButton()
+	{
+		closeApplicationConfirmationPanel.SetActive(false);
+	}
+
+	public void OnConfirmationPanelYesButton()
+	{
+		Application.Quit();
+	}
+
+	public void OnRestoreDefaultsButton()
+	{
+		RestoreDefaults();
+	}
+
+	public void OnToggleValueChanged(Toggle toggle)
+	{
+		if (!toggle.isOn) { return; }
+
+		int index = stoppingConditionToggles.IndexOf(toggle);
+
+		for(int i = 0; i < stoppingConditionToggles.Count; ++i)
 		{
-			foreach (SpriteRenderer spriteRenderer in individual.stickman.GetComponentsInChildren<SpriteRenderer>())
+			if(i == index)
 			{
-				Color color = spriteRenderer.color;
-				color = Color.white;
-				color.a = 0.1f;
-				spriteRenderer.color = color;
+				stoppingConditionBools[i] = true;
+				if(i == 0)
+				{
+					desiredFitnessInputField.interactable = false;
+					maxGenerationCountInputField.interactable = false;
+				}
+				else if(i == 1)
+				{
+					desiredFitnessInputField.interactable = true;
+					maxGenerationCountInputField.interactable = false;
+				}
+				else
+				{
+					desiredFitnessInputField.interactable = false;
+					maxGenerationCountInputField.interactable = true;
+				}
+				
+			}
+			else
+			{
+				stoppingConditionBools[i] = false;
+				stoppingConditionToggles[i].isOn = false;
 			}
 		}
 	}
 
-	private void LateUpdate()
+	#endregion
+
+	private void RestoreDefaults()
 	{
-		if(isAlgorithmRunning == false) { return; }
-		sort(population, 0, population.Count - 1);
-		foreach(SpriteRenderer spriteRenderer in population[population.Count - 1].stickman.GetComponentsInChildren<SpriteRenderer>())
-		{
-			Color color = spriteRenderer.color;
-			color = Color.green;
-			color.a = 1;
-			spriteRenderer.color = color;
-			followerCamera.Player = population[population.Count - 1].stickman.transform.GetChild(2).gameObject;
-			BestScoreOfCurrentGen = population[population.Count - 1].fitness;
-			if(BestScoreOfCurrentGen > BestScoreOfAllGens)
-			{
-				BestScoreOfAllGens = BestScoreOfCurrentGen;
-			}
-			//spriteRenderer.enabled = true;
-		}
+		RestoreParameters();
+		RestoreToggles();
+	}
+
+	private void RestoreParameters()
+	{
+		eachGenerationLastsSecondsInputField.text = defEachGenerationLastsSeconds.ToString();
+		minBalanceForceInputField.text = defMinBalanceForce.ToString();
+		maxBalanceForceInputField.text = defMaxBalanceForce.ToString();
+		minMoveForceInputField.text = defMinMoveForce.ToString();
+		maxMoveForceInputField.text = defMaxMoveForce.ToString();
+		populationCountInputField.text = defPopulationCount.ToString();
+		mutationPercentageInputField.text = defMutationPercentage.ToString();
+		bodyBalanceFitnessWeightInputField.text = defBodyBalanceFitnessWeight.ToString();
+		distanceTraveledFitnessWeightInputField.text = defDistanceTraveledFitnessWeight.ToString();
+		desiredFitnessInputField.text = defDesiredFitness.ToString();
+		maxGenerationCountInputField.text = defMaxGenerationCount.ToString();
+	}
+
+	private void RestoreToggles()
+	{
+		stoppingConditionToggles[0].isOn = defStopIfReached50MetersIn15Seconds;
+		stoppingConditionToggles[1].isOn = defStopIfReachedDesiredFitness;
+		stoppingConditionToggles[2].isOn = defStopIfReachedMaxGenerationCount;
+
+		stoppingConditionBools[0] = defStopIfReached50MetersIn15Seconds;
+		stoppingConditionBools[1] = defStopIfReachedDesiredFitness;
+		stoppingConditionBools[2] = defStopIfReachedMaxGenerationCount;
+	}
+
+	private void SetParameters()
+	{
+		eachGenerationLastsSeconds = float.Parse(eachGenerationLastsSecondsInputField.text);
+		minBalanceForce = int.Parse(minBalanceForceInputField.text);
+		maxBalanceForce = int.Parse(maxBalanceForceInputField.text);
+		minMoveForce = int.Parse(minMoveForceInputField.text);
+		maxMoveForce = int.Parse(maxMoveForceInputField.text);
+		populationCount = int.Parse(populationCountInputField.text);
+		selectCount = (int) Mathf.Sqrt(populationCount);
+		bodyBalanceFitnessWeight = float.Parse(bodyBalanceFitnessWeightInputField.text);
+		distanceTraveledFitnessWeight = float.Parse(distanceTraveledFitnessWeightInputField.text);
+		desiredFitness = float.Parse(desiredFitnessInputField.text);
+		maxGenerationCount = int.Parse(maxGenerationCountInputField.text);
+
+		initialTimeRemaining = eachGenerationLastsSeconds;
+		int removeChromosomeCount = (int)(initialTimeRemaining / 15f);
+		chromosomeLength = (int) (initialTimeRemaining / 0.25f) - removeChromosomeCount;
+		mutationCount = (int)(float.Parse(mutationPercentageInputField.text) * chromosomeLength);
 	}
 
 	public void OnRunButton()
 	{
-		StartCoroutine(CreateStickmen());
-		StartCoroutine(InitFirstGeneration());
-	}
-
-	private void DestroyStickmen()
-	{
-		for (int i = 0; i < stickmen.Count; i++)
+		if (!isAlgorithmRunning)
 		{
-			Destroy(stickmen[i].gameObject);
+			SetParameters();
+			ResetStickman();
+			StartRunning();
+		}
+		else
+		{
+			StopRunning();
 		}
 	}
 
-	private IEnumerator CreateStickmen()
+	private void StartRunning()
 	{
-		stickmen = new List<StickManController>();
-		/*for (int i = 0; i < populationCount; ++i)
-		{*/
-			StartCoroutine(CreateStickmanRoutine());
-		//}
+		settingsButton.interactable = false;
+		BestScoreOfAllGens = 0;
+		BestScoreOfCurrentGen = 0;
+		CurrentGeneration = 1;
+		CurrentRemainingTime = initialTimeRemaining;
+		followerCamera.Player = stickman.transform.GetChild(2).gameObject;
+		StartCoroutine(InitFirstGeneration());
+		runButton.GetComponent<Image>().color = runButtonColors[1];
+		runButtonText.text = "Stop";
+		isAlgorithmRunning = true;
+	}
 
+	private void StopRunning()
+	{
+		StopAllCoroutines();
+		runButton.GetComponent<Image>().color = runButtonColors[0];
+		runButtonText.text = "Start";
+		isAlgorithmRunning = false;
+		settingsButton.interactable = true;
+	}
+
+	private void DestroyStickman()
+	{
+		Destroy(stickman.gameObject);
+	}
+
+	private IEnumerator CreateStickman()
+	{
+		yield return new WaitForSeconds(0.25f);
+		stickman = Instantiate(stickmanPrefab, startPos, Quaternion.identity).GetComponent<StickManController>();
 		Physics2D.IgnoreLayerCollision(6, 6);
 		yield return null;
 	}
 
-	IEnumerator CreateStickmanRoutine()
+	private void ResetStickman()
 	{
-		stickmen.Add(Instantiate(stickmanPrefab, startPos, Quaternion.identity).GetComponent<StickManController>());
-		yield return null;
-	}
-
-	private void ResetStickmen()
-	{
-		for(int i = 0; i < populationCount; ++i)
+		stickman.Individual = null;
+		Transform[] childTransforms = stickman.GetComponentsInChildren<Transform>();
+		for(int j = 0; j < childTransforms.Length; ++j)
 		{
-			stickmen[i].Individual = null;
-			Transform[] childTransforms = stickmen[i].GetComponentsInChildren<Transform>();
-			for(int j = 0; j < childTransforms.Length; ++j)
-			{
-				childTransforms[j].position = stickmen[i].childLocations[j];
-				childTransforms[j].rotation = stickmen[i].childRotations[j];
-			}
+			childTransforms[j].position = stickman.childLocations[j];
+			childTransforms[j].rotation = stickman.childRotations[j];
 		}
-		for(int i = 0; i < populationCount; ++i)
-		{
-			stickmen[i].gameObject.SetActive(true);
-		}
+		stickman.gameObject.SetActive(true);
 	}
 
 	private IEnumerator InitFirstGeneration()
@@ -158,22 +340,25 @@ public class GameManager : MonoBehaviour
 		for (int i = 0; i < populationCount; ++i)
 		{
 			population.Add(GenerateRandomChromosome());
-			stickmen[i].Individual = population[i];
+			//stickmen[i].Individual = population[i];
 		}
-		isAlgorithmRunning = true;
 		yield return StartCoroutine(CalculateFitnesses(population));
+		shouldStartTimer = true;
+		yield return StartCoroutine(ShowBestIndividual(population));
 		yield return StartCoroutine(GeneticAlgorithm());
+		StopRunning();
 	}
 
 	private IEnumerator GeneticAlgorithm()
 	{
-		Debug.Log("Population Count: " + population.Count);
-		while (CurrentGeneration < generationCount)
+		while (!ShouldStop())
 		{
-			Debug.Log("Population Count: " + population.Count);
+			shouldStartTimer = false;
+			CurrentRemainingTime = initialTimeRemaining;
+			CurrentGeneration++;
 			//DestroyStickmen();
 			//CreateStickmen();
-			ResetStickmen();
+			ResetStickman();
 			population = SelectIndividuals(population);
 			population = ReproducePopulation(population);
 
@@ -188,15 +373,58 @@ public class GameManager : MonoBehaviour
 				MutateChromosome(population[i]);
 			}
 
-			for(int i = 0; i < population.Count; ++i)
-			{
-				stickmen[i].Individual = population[i];
-			}
 
 			yield return StartCoroutine(CalculateFitnesses(population));
-			CurrentGeneration++;
+			shouldStartTimer = true;
+			yield return StartCoroutine(ShowBestIndividual(population));
 		}
 		yield return null;
+	}
+
+	private bool ShouldStop()
+	{
+		if (stoppingConditionBools[2])
+		{
+			Debug.LogError("maxgen");
+			return CurrentGeneration >= maxGenerationCount;
+		}
+		else if (stoppingConditionBools[1])
+		{
+			Debug.LogError("desfit");
+			return BestScoreOfAllGens >= desiredFitness;
+		}
+		else
+		{
+			Debug.LogError("reached50");
+			return BestScoreOfAllGens >= 1f;
+		}
+	}
+
+	private IEnumerator ShowBestIndividual(List<Individual> population)
+	{
+		sort(population, 0, population.Count - 1);
+		Individual best = population[population.Count - 1];
+		stickman.Individual = best;
+
+		for (int i = 0; i < StickManController.musclesCount; ++i)
+		{
+			stickman.muscles[i].force = stickman.Individual.forces[i];
+		}
+
+		float before = Time.time;
+
+		for (int i = 0; i < chromosomeLength; ++i)
+		{
+			yield return StartCoroutine(best.Move(best.chromosome[i]));
+			BestScoreOfCurrentGen = (best.stickman.playerHipJumpScript.transform.position.x / 50f);
+			//moveBackgroundMasterScript.MoveAll(best.stickman.playerHipJumpScript.transform.position.x);
+			if (BestScoreOfCurrentGen > BestScoreOfAllGens)
+			{
+				BestScoreOfAllGens = BestScoreOfCurrentGen;
+			}
+		}
+		float after = Time.time;
+		Debug.LogError(after - before);
 	}
 
 	private IEnumerator CalculateFitnesses(List<Individual> population)
@@ -224,25 +452,27 @@ public class GameManager : MonoBehaviour
 
 	private IEnumerator CalculateFitness(Individual individual)
 	{
+		individual.fitness = 0;
+		for(int i = 0; i < StickManController.musclesCount; ++i)
+		{
+			individual.fitness += individual.forces[i];
+		}
+
+		individual.fitness /= StickManController.musclesCount;
+		individual.fitness /= maxBalanceForce;
+		individual.fitness *= bodyBalanceFitnessWeight;
+
 		for(int i = 0; i < chromosomeLength; ++i)
 		{
 			/*for (int j = 0; j < StickManController.musclesCount; ++j)
 			{
 				individual.stickman.muscles[j].force = individual.chromosome[i].forces[j];
 			}*/
-			if (individual.isDead)
-			{
-				break;
-			}
-			yield return StartCoroutine(individual.Move(individual.chromosome[i]));
-			individual.fitness += individual.chromosome[i].addForceVector.x;
+			//yield return StartCoroutine(individual.Move(individual.chromosome[i]));
+			individual.fitness += individual.chromosome[i].addForceVector.x * distanceTraveledFitnessWeight;
 		}
-		Debug.LogError(individual.fitness);
 		individual.isFitnessCalculationFinished = true;
-		if (individual.isDead)
-		{
-			individual.stickman.gameObject.SetActive(false);
-		}
+		yield return null;
 	}
 
 	private List<Individual> SelectIndividuals(List<Individual> population)
@@ -252,8 +482,6 @@ public class GameManager : MonoBehaviour
 
 		sortedPopulation.AddRange(population);
 		sort(sortedPopulation, 0, sortedPopulation.Count - 1);
-
-		Debug.LogError(sortedPopulation[sortedPopulation.Count - 1].fitness);
 
 		for (int i = 0; i < selectCount; ++i)
 		{
@@ -287,11 +515,14 @@ public class GameManager : MonoBehaviour
 		int newLengthChromosome_2 = Random.Range(0, 1) * (chromosomeLength - newLengthChromosome_1);
 		int newLengthChromosome_3 = individual1.chromosome.Count - (newLengthChromosome_1 + newLengthChromosome_2);
 
-		Individual newIndividual = new Individual(chromosomeLength, stickmanPrefab, startPos);
+		Individual newIndividual = new Individual(chromosomeLength, startPos);
 
 		newIndividual.chromosome.AddRange(individual1.chromosome.GetRange(0, newLengthChromosome_1));
 		newIndividual.chromosome.AddRange(individual2.chromosome.GetRange(newLengthChromosome_1, newLengthChromosome_2));
 		newIndividual.chromosome.AddRange(individual1.chromosome.GetRange(newLengthChromosome_2, newLengthChromosome_3));
+
+		newIndividual.forces.AddRange(individual1.forces.GetRange(0, individual1.forces.Count / 2));
+		newIndividual.forces.AddRange(individual2.forces.GetRange(individual1.forces.Count / 2, individual1.forces.Count - newIndividual.forces.Count));
 
 		return newIndividual;
 	}
@@ -306,7 +537,7 @@ public class GameManager : MonoBehaviour
 
 	private Individual GenerateRandomChromosome()
 	{
-		Individual individual = new Individual(chromosomeLength, stickmanPrefab, startPos);
+		Individual individual = new Individual(chromosomeLength, startPos);
 
 		//individual.stickman = stickman;
 
@@ -315,7 +546,10 @@ public class GameManager : MonoBehaviour
 			Gene gene = GenerateRandomGene(i % 2);
 			individual.chromosome.Add(gene);
 		}
-
+		for (int j = 0; j < StickManController.musclesCount; ++j)
+		{
+			individual.forces.Add(Random.Range(minBalanceForce, maxBalanceForce));
+		}
 		return individual;
 	}
 
@@ -323,12 +557,12 @@ public class GameManager : MonoBehaviour
 	public Gene GenerateRandomGene(int muscleIndex)
 	{
 		//muscleIndex = Random.Range(0, StickManController.movableMusclesCount);
-		float rotationX = Random.Range(maxForceRotationX, maxForceRotationX);
+		float rotationX = Random.Range(minMoveForce, maxMoveForce);
 		float rotationY = Random.Range(0f, 0f);
 		float moveRotationRotation = Random.Range(0, 120f);
 		/*if(muscleIndex == 0)
 		{
-			//rotationX *= -1;
+			rotationX *= -1;
 			moveRotationRotation *= -1;
 		}*/
 		float moveRotationLerpMultiplier = Random.Range(300, 600f);
@@ -336,10 +570,6 @@ public class GameManager : MonoBehaviour
 		Vector2 addForceVector = new Vector2(rotationX, rotationY);
 
 		Gene gene = new Gene(muscleIndex, /*new Vector2(10,0), 60, 1000 */addForceVector, moveRotationRotation, moveRotationLerpMultiplier);
-		for (int j = 0; j < StickManController.musclesCount; ++j)
-		{
-			gene.forces.Add(Random.Range(minBoneForce, maxBoneForce));
-		}
 		return gene;
 	}
 
@@ -353,12 +583,14 @@ public class GameManager : MonoBehaviour
 		public float fitness;
 		public bool isFitnessCalculationFinished;
 		public bool isDead;
+		public List<float> forces;
 
 
-		public Individual(int length, GameObject stickmanPrefab, Vector3 startPos)
+		public Individual(int length, Vector3 startPos)
 		{
 			this.chromosomeLength = length;
 			chromosome = new List<Gene>(length);
+			forces = new List<float>();
 		}
 
 		public IEnumerator Move(Gene gene)
@@ -367,7 +599,6 @@ public class GameManager : MonoBehaviour
 			//stickman.Balance();
 			stickman.Step2(gene.muscleIndex, gene.addForceVector, gene.moveRotationRotation, gene.moveRotationLerpMultiplier);
 			//stickman.Balance();
-
 		}
 
 	}
@@ -378,7 +609,6 @@ public class GameManager : MonoBehaviour
 		public Vector2 addForceVector;
 		public float moveRotationRotation;
 		public float moveRotationLerpMultiplier;
-		public List<float> forces;
 		//public Vector2 rotation;
 		//public float multiplierForce;
 		public Gene(int muscleIndex, Vector2 addForceVector, float moveRotationRotation, float moveRotationLerpMultiplier)
@@ -387,7 +617,6 @@ public class GameManager : MonoBehaviour
 			this.addForceVector = addForceVector;
 			this.moveRotationRotation = moveRotationRotation;
 			this.moveRotationLerpMultiplier = moveRotationLerpMultiplier;
-			forces = new List<float>();
 		}
 	}
 

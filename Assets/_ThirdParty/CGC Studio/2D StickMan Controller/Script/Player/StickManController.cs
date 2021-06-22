@@ -51,7 +51,10 @@ public class StickManController : MonoBehaviour
 		{
 			if(value == null)
 			{
-				individual.stickman = null;
+				if (individual != null)
+				{
+					individual.stickman = null;
+				}
 				individual = null;
 			}
 			else
@@ -79,7 +82,6 @@ public class StickManController : MonoBehaviour
 			childLocations.Add(childTransforms[i].position);
 			childRotations.Add(childTransforms[i].rotation);
 		}
-		Debug.LogError(childLocations.Count);
 	}
 
 	private void Start() {
@@ -165,7 +167,6 @@ public class StickManController : MonoBehaviour
 		{
 			movableMuscles[muscleIndex].bone.AddForce(addForceVector, ForceMode2D.Impulse);
 		}
-		Debug.LogError(movableMuscles[muscleIndex].bone);
 	}
 }
 [System.Serializable]
