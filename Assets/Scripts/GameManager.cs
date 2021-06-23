@@ -6,14 +6,14 @@ using UnityEngine.UI;
 public class GameManager : MonoBehaviour
 {
 	private const float defEachGenerationLastsSeconds = 15f;
-	private const float defMinBalanceForce = -50f;
-	private const float defMaxBalanceForce = 50f;
+	private const float defMinBalanceForce = -25f;
+	private const float defMaxBalanceForce = 75f;
 	private const float defMinMoveForce = 0f;
 	private const float defMaxMoveForce = 25f;
 	private const int defPopulationCount = 1000;
 	private const float defMutationPercentage = 0.03663f;
-	private const float defBodyBalanceFitnessWeight = 0.99f;
-	private const float defDistanceTraveledFitnessWeight = 0.01f;
+	private const float defBodyBalanceFitnessWeight = 0.95f;
+	private const float defDistanceTraveledFitnessWeight = 0.05f;
 	private const float defDesiredFitness = 0.95f;
 	private const int defMaxGenerationCount = 100000;
 	private const bool defStopIfReached50MetersIn15Seconds = true;
@@ -362,7 +362,6 @@ public class GameManager : MonoBehaviour
 		for (int i = 0; i < populationCount; ++i)
 		{
 			population.Add(GenerateRandomChromosome());
-			//stickmen[i].Individual = population[i];
 		}
 		yield return StartCoroutine(CalculateFitnesses(population));
 		shouldStartTimer = true;
@@ -378,8 +377,6 @@ public class GameManager : MonoBehaviour
 			shouldStartTimer = false;
 			CurrentRemainingTime = initialTimeRemaining;
 			CurrentGeneration++;
-			//DestroyStickmen();
-			//CreateStickmen();
 			ResetStickman();
 			population = SelectIndividuals(population);
 			population = ReproducePopulation(population);
@@ -387,7 +384,6 @@ public class GameManager : MonoBehaviour
 			for(int i = population.Count; i < populationCount; ++i)
 			{
 				population.Add(GenerateRandomChromosome());
-				//stickmen[i].Individual = population[i];
 			}
 
 			for(int i = 0; i < population.Count; i++)
@@ -439,8 +435,7 @@ public class GameManager : MonoBehaviour
 
 			BestReachedOfCurrentGen = best.stickman.playerHipJumpScript.transform.position.x;
 			BestScoreOfCurrentGen = (best.stickman.playerHipJumpScript.transform.position.x / 50f);
-			//BestScoreOfCurrentGen = best.fitness;
-			//moveBackgroundMasterScript.MoveAll(best.stickman.playerHipJumpScript.transform.position.x);
+
 			if (BestScoreOfCurrentGen > BestScoreOfAllGens)
 			{
 				BestScoreOfAllGens = BestScoreOfCurrentGen;
@@ -450,7 +445,6 @@ public class GameManager : MonoBehaviour
 				BestReachedOfAllGens = BestReachedOfCurrentGen;
 			}
 		}
-		//Debug.LogError(after - before);
 	}
 
 	private IEnumerator CalculateFitnesses(List<Individual> population)
@@ -490,11 +484,6 @@ public class GameManager : MonoBehaviour
 		
 		for(int i = 0; i < chromosomeLength; ++i)
 		{
-			/*for (int j = 0; j < StickManController.musclesCount; ++j)
-			{
-				individual.stickman.muscles[j].force = individual.chromosome[i].forces[j];
-			}*/
-			//yield return StartCoroutine(individual.Move(individual.chromosome[i]));
 			individual.fitness += individual.chromosome[i].addForceVector.x * distanceTraveledFitnessWeight;
 		}
 		individual.isFitnessCalculationFinished = true;
@@ -571,8 +560,6 @@ public class GameManager : MonoBehaviour
 	{
 		Individual individual = new Individual(chromosomeLength, startPos);
 
-		//individual.stickman = stickman;
-
 		for (int i = 0; i < chromosomeLength; ++i)
 		{
 			Gene gene = GenerateRandomGene(i % 2);
@@ -590,20 +577,12 @@ public class GameManager : MonoBehaviour
 
 	public Gene GenerateRandomGene(int muscleIndex)
 	{
-		//muscleIndex = Random.Range(0, StickManController.movableMusclesCount);
 		float rotationX = Random.Range(minMoveForce, maxMoveForce);
 		float rotationY = Random.Range(0f, 0f);
-		float moveRotationRotation = Random.Range(0, 120f);
-		/*if(muscleIndex == 0)
-		{
-			rotationX *= -1;
-			moveRotationRotation *= -1;
-		}*/
-		float moveRotationLerpMultiplier = Random.Range(300, 600f);
 
 		Vector2 addForceVector = new Vector2(rotationX, rotationY);
 
-		Gene gene = new Gene(muscleIndex, /*new Vector2(10,0), 60, 1000 */addForceVector, moveRotationRotation, moveRotationLerpMultiplier);
+		Gene gene = new Gene(muscleIndex, addForceVector);
 		return gene;
 	}
 
@@ -630,9 +609,7 @@ public class GameManager : MonoBehaviour
 		public IEnumerator Move(Gene gene)
 		{
 			yield return new WaitForSeconds(0.25f);
-			//stickman.Balance();
-			stickman.Step2(gene.muscleIndex, gene.addForceVector, gene.moveRotationRotation, gene.moveRotationLerpMultiplier);
-			//stickman.Balance();
+			stickman.Step(gene.muscleIndex, gene.addForceVector);
 		}
 
 	}
@@ -641,16 +618,11 @@ public class GameManager : MonoBehaviour
 	{
 		public int muscleIndex;
 		public Vector2 addForceVector;
-		public float moveRotationRotation;
-		public float moveRotationLerpMultiplier;
-		//public Vector2 rotation;
-		//public float multiplierForce;
-		public Gene(int muscleIndex, Vector2 addForceVector, float moveRotationRotation, float moveRotationLerpMultiplier)
+
+		public Gene(int muscleIndex, Vector2 addForceVector)
 		{
 			this.muscleIndex = muscleIndex;
 			this.addForceVector = addForceVector;
-			this.moveRotationRotation = moveRotationRotation;
-			this.moveRotationLerpMultiplier = moveRotationLerpMultiplier;
 		}
 	}
 

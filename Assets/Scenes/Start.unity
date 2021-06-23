@@ -1136,7 +1136,6 @@ MonoBehaviour:
   runButtonSprites:
   - {fileID: 21300000, guid: ec88f3f8eb811014d9ba231e96d07010, type: 3}
   - {fileID: 21300000, guid: 184614c1c0017884682fe5f374dffe7b, type: 3}
-  runButtonText: {fileID: 0}
   currentGenerationText: {fileID: 406980180}
   bestScoreOfCurrentGenText: {fileID: 1954329004}
   bestScoreOfAllGensText: {fileID: 171840669}

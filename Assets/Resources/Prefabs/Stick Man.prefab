@@ -3391,7 +3391,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PlayerHip: {fileID: 5990579021589680042}
-  Dust: {fileID: 0}
+  Dust: {fileID: 7692934262259606013, guid: bd52c3f1f5a33ce4eaaeffe1e607187c, type: 3}
 --- !u!58 &6845156054601732527
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -3466,7 +3466,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PlayerHip: {fileID: 5990579021589680042}
-  Dust: {fileID: 0}
+  Dust: {fileID: 7692934262259606013, guid: bd52c3f1f5a33ce4eaaeffe1e607187c, type: 3}
 --- !u!58 &6845156054755668161
 CircleCollider2D:
   m_ObjectHideFlags: 0

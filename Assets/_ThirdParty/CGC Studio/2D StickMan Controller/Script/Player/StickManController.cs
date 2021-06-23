@@ -67,8 +67,6 @@ public class StickManController : MonoBehaviour
 
 	private void Awake()
 	{
-		/*movableMuscles.Add(LEFTLEG);
-		movableMuscles.Add(RIGHTLEG);*/
 		musclesCount = muscles.Length;
 		movableMusclesCount = movableMuscles.Count;
 
@@ -84,58 +82,12 @@ public class StickManController : MonoBehaviour
 		}
 	}
 
-	private void Start() {
-		//muscles = GetComponentsInChildren<Rigidbody2D>();
-	}
     // Update is called once per frame
     private void Update()
     {
 		foreach (_Muscle muscle in muscles)
 		{
 			muscle.ActiveMuscle();
-		}
-		
-		if (CanControllerNow)
-		{
-			if (Input.GetKeyDown(RightInput))
-			{
-				right = true;
-			}
-			if (Input.GetKeyDown(LeftInput))
-			{
-				left = true;
-			}
-			if (Input.GetKeyUp(LeftInput))
-			{
-				left = false;
-				right = false;
-
-			}
-			if (Input.GetKeyUp(RightInput))
-			{
-				left = false;
-				right = false;
-			}
-		}
-		
-
-		while(right == true && left == false && Time.time > MoveDelayPointer)
-		{
-			RIGHTLEG.bone.MoveRotation(Mathf.LerpAngle(RIGHTLEG.bone.rotation, -60, 1000 * Time.deltaTime));
-			RIGHTLEG.bone.AddForce(new Vector2(10, 0), ForceMode2D.Impulse);
-			//LEFTLEG.bone.AddForce(new Vector2(60, 0) * -0.5f, ForceMode2D.Impulse);
-			//Invoke("Step1RightArm",0f);
-			//Invoke("Step2Right",0.085f);
-
-			MoveDelayPointer = Time.time  + MoveDelay;
-		}
-		while(left == true && right == false && Time.time > MoveDelayPointer)
-		{
-			LEFTLEG.bone.MoveRotation(Mathf.LerpAngle(LEFTLEG.bone.rotation, 60, 1000 * Time.deltaTime));
-			LEFTLEG.bone.AddForce(new Vector2(-10, 0), ForceMode2D.Impulse);
-			//RIGHTLEG.bone.AddForce(new Vector2(-60, 0) * -0.5f, ForceMode2D.Impulse);
-			//Invoke("Step2left",0.085f);
-			MoveDelayPointer = Time.time  + MoveDelay;
 		}
     }
 
@@ -147,22 +99,8 @@ public class StickManController : MonoBehaviour
 		}
 	}
 
-	public void Step(int muscleIndex, Vector2 rotation, float multiplierForce)
+	public void Step(int muscleIndex, Vector2 addForceVector)
 	{
-		movableMuscles[muscleIndex].ApplyForce(rotation, multiplierForce);
-		/*if(muscleIndex == 0)
-		{
-			movableMuscles[1].ApplyForce(rotation * -0.5f, multiplierForce);
-		}
-		else
-		{
-			movableMuscles[0].ApplyForce(rotation * -0.5f, multiplierForce);
-		}*/
-	}
-
-	public void Step2(int muscleIndex, Vector2 addForceVector, float moveRotationRotation, float moveRotationLerpMultiplier)
-	{
-		//movableMuscles[muscleIndex].bone.MoveRotation(Mathf.LerpAngle(movableMuscles[muscleIndex].RootRotation, moveRotationRotation, moveRotationLerpMultiplier * Time.deltaTime));
 		if (playerHipJumpScript.Grounded)
 		{
 			movableMuscles[muscleIndex].bone.AddForce(addForceVector, ForceMode2D.Impulse);
