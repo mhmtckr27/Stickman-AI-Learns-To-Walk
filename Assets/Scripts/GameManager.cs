@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
+	//varsayilan parametreler
 	private const float defEachGenerationLastsSeconds = 15f;
 	private const float defMinBalanceForce = -25f;
 	private const float defMaxBalanceForce = 75f;
@@ -25,26 +26,23 @@ public class GameManager : MonoBehaviour
 	[SerializeField] private CGCCameraFollow followerCamera;
 	[SerializeField] private Vector3 startPos;
 
-	private float eachGenerationLastsSeconds;
-	private float minBalanceForce;
-	private float maxBalanceForce;
-	private float minMoveForce;
-	private float maxMoveForce;
-	private int populationCount;
-	private int selectCount;
-	private int chromosomeLength;
-	private int mutationCount;
-	private float bodyBalanceFitnessWeight;
-	private float distanceTraveledFitnessWeight;
-	private float desiredFitness;
-	private int maxGenerationCount;
+	private float eachGenerationLastsSeconds;		//her bireyin kromozom uzunlugunu belirlemek icin, saniye cinsinden
+	private float minBalanceForce;					//min-max, bu iki deger arasinda rastgele bir deger olusturulur, bununla kendini dengeler cop adam
+	private float maxBalanceForce;					//
+	private float minMoveForce;						//min-max, bu iki deger arasinda rastgele bir deger olusturulur, ona gore adim atar cop adam
+	private float maxMoveForce;						//
+	private int populationCount;					//populasyon sayisi
+	private int selectCount;						//secilip caprazlanacak birey sayisi, otomatik olarak populasyonun kare koku olarak ayarlanir
+	private int chromosomeLength;					//kromozom uzunlugu, eachGenerationLastsSeconds degiskenine gore otomatik ayarlanir, cop adamin atacagi toplam adim sayisina denk gelir
+	private int mutationCount;						//mutasyon sayisi, mutasyon oranina gore otomatik hesaplanir
+	private float bodyBalanceFitnessWeight;			//cop adamin vucut dengesinin toplam skora katkisi
+	private float distanceTraveledFitnessWeight;	//cop adamin X eksenindeki son pozisyonunun toplam skora katkisi
+	private float desiredFitness;					//hedeflenen skor
+	private int maxGenerationCount;					//maksimum jenerasyon sayisi
 
-	private List<bool> stoppingConditionBools;
-	/*
-	private bool stopIfReached50MetersIn15Seconds;
-	private bool stopIfReachedDesiredFitness;
-	private bool stopIfReachedMaxGenerationCount;
-	*/
+	private List<bool> stoppingConditionBools;		//durma kosullarina karsilik gelen bool listesi
+
+	//UI ile alakali atamalar
 	[Space]
 	[Header("UI")]
 	[SerializeField] private Button settingsButton;
@@ -74,6 +72,7 @@ public class GameManager : MonoBehaviour
 	[SerializeField] private InputField desiredFitnessInputField;
 	[SerializeField] private InputField maxGenerationCountInputField;
 
+	//geri sayim degiskenleri
 	private float initialTimeRemaining = 15f;
 	private float currentRemainingTime;
 	public float CurrentRemainingTime
@@ -93,6 +92,7 @@ public class GameManager : MonoBehaviour
 		}
 	}
 
+	//jenerasyon, skor gibi degiskenler ve bunlarin arayuzu otomatik guncellemesi
 	private int currentGeneration;
 	public int CurrentGeneration
 	{
@@ -153,6 +153,7 @@ public class GameManager : MonoBehaviour
 	bool isAlgorithmRunning = false;
 	bool shouldStartTimer = false;
 
+	//uygulama baslayinca cop adam olusur, durma kosullari cekilir
 	private void Start()
 	{
 		stoppingConditionBools = new List<bool>();
@@ -166,11 +167,13 @@ public class GameManager : MonoBehaviour
 
 	private void Update()
 	{
+		//uygulama calisiyorsa ve timer da calismaliysa timer guncellenir
 		if(isAlgorithmRunning == false) { return; }
 		if (shouldStartTimer == false) { return; }
 		CurrentRemainingTime -= Time.deltaTime;
 	}
 
+	//UI butonlarinin baglanmasi
 	#region UI
 	public void OnSettingsButton()
 	{
@@ -202,11 +205,14 @@ public class GameManager : MonoBehaviour
 		RestoreDefaults();
 	}
 
+
+	//ekstra bi renk katmak istemistim uygulamaya ama yetismedi maalesef
 	public void OnExtraMotivationToggleChange(Toggle toggle)
 	{
 
 	}
 
+	//durma kosulu tiklerinden herhangi birinin degeri degistiginde cagrilan fonksiyon. ayni anda sadece biri aktif olabilecegi icin onun kontrollerini yapiyorum
 	public void OnStoppingConditionsToggleValueChanged(Toggle toggle)
 	{
 		if (!toggle.isOn) { return; }
@@ -245,12 +251,14 @@ public class GameManager : MonoBehaviour
 
 	#endregion
 
+	//parametreleri varsayilana dondurme butonuna basilinca cagrilir
 	private void RestoreDefaults()
 	{
 		RestoreParameters();
 		RestoreToggles();
 	}
 
+	//parametreleri varsayilana donduren fonksiyon
 	private void RestoreParameters()
 	{
 		eachGenerationLastsSecondsInputField.text = defEachGenerationLastsSeconds.ToString();
@@ -266,6 +274,7 @@ public class GameManager : MonoBehaviour
 		maxGenerationCountInputField.text = defMaxGenerationCount.ToString();
 	}
 
+	//durma kosullari tiklerini varsayilana donduren fonksiyon
 	private void RestoreToggles()
 	{
 		stoppingConditionToggles[0].isOn = defStopIfReached50MetersIn15Seconds;
@@ -277,6 +286,7 @@ public class GameManager : MonoBehaviour
 		stoppingConditionBools[2] = defStopIfReachedMaxGenerationCount;
 	}
 
+	//run butonuna basilinca parametreler cekilir ara yuzden
 	private void SetParameters()
 	{
 		eachGenerationLastsSeconds = float.Parse(eachGenerationLastsSecondsInputField.text);
@@ -297,6 +307,7 @@ public class GameManager : MonoBehaviour
 		mutationCount = (int)(float.Parse(mutationPercentageInputField.text) * chromosomeLength);
 	}
 
+	//run butonuna basilinca calisir, uygulama zaten calisiyorsa durdurur
 	public void OnRunButton()
 	{
 		if (!isAlgorithmRunning)
@@ -311,6 +322,8 @@ public class GameManager : MonoBehaviour
 		}
 	}
 
+
+	//algoritma calismaya baslar, sifirlamalar ve ilklendirmeler yapilir
 	private void StartRunning()
 	{
 		settingsButton.interactable = false;
@@ -326,6 +339,7 @@ public class GameManager : MonoBehaviour
 		isAlgorithmRunning = true;
 	}
 
+	//algoritma durur, butun rutinler durur ve gerekli atamalar guncellemeler yapilir
 	private void StopRunning()
 	{
 		StopAllCoroutines();
@@ -334,6 +348,7 @@ public class GameManager : MonoBehaviour
 		settingsButton.interactable = true;
 	} 
 
+	//cop adam olusturulur
 	private IEnumerator CreateStickman()
 	{
 		yield return new WaitForSeconds(0.25f);
@@ -342,6 +357,7 @@ public class GameManager : MonoBehaviour
 		yield return null;
 	}
 
+	//her jenerasyon sonunda cop adam pozisyonunu sifirlamak icin
 	private void ResetStickman()
 	{
 		stickman.Individual = null;
@@ -354,6 +370,7 @@ public class GameManager : MonoBehaviour
 		stickman.gameObject.SetActive(true);
 	}
 
+	//ilk jenerasyonu calistirma
 	private IEnumerator InitFirstGeneration()
 	{
 		CurrentGeneration = 1;
@@ -370,6 +387,7 @@ public class GameManager : MonoBehaviour
 		StopRunning();
 	}
 
+	//ilkden sonraki jenerasyonlar bu rutinin icindeki while icinde doner, durma kosulu saglanana kadar
 	private IEnumerator GeneticAlgorithm()
 	{
 		while (!ShouldStop())
@@ -399,6 +417,7 @@ public class GameManager : MonoBehaviour
 		yield return null;
 	}
 
+	//belirtilen durma kosulu saglanmis mi diye bakilir
 	private bool ShouldStop()
 	{
 		if (stoppingConditionBools[2])
@@ -418,6 +437,7 @@ public class GameManager : MonoBehaviour
 		}
 	}
 
+	//o jenerasyonun en iyi bireyinin ekrandaki cop adam uzerinde gosterilmesi
 	private IEnumerator ShowBestIndividual(List<Individual> population)
 	{
 		sort(population, 0, population.Count - 1);
@@ -447,6 +467,7 @@ public class GameManager : MonoBehaviour
 		}
 	}
 
+	//verilen populasyonun skorlarinin hesaplanmasi
 	private IEnumerator CalculateFitnesses(List<Individual> population)
 	{
 		foreach(Individual individual in population)
@@ -469,7 +490,7 @@ public class GameManager : MonoBehaviour
 		yield return null;
 	}
 
-
+	//populasyondaki her bir birey icin cagrilir, skor hesaplar
 	private IEnumerator CalculateFitness(Individual individual)
 	{
 		individual.fitness = 0;
@@ -490,6 +511,7 @@ public class GameManager : MonoBehaviour
 		yield return null;
 	}
 
+	//en iyi bireylerin secilmesini saglayan fonksiyon
 	private List<Individual> SelectIndividuals(List<Individual> population)
 	{
 		List<Individual> sortedPopulation = new List<Individual>();
@@ -506,6 +528,7 @@ public class GameManager : MonoBehaviour
 		return newPopulation;
 	}
 
+	//secilen en iyi bireyleri kendi arasinda caprazlar
 	private List<Individual> ReproducePopulation(List<Individual> populationToReproduce)
 	{
 		List<Individual> newPopulation = new List<Individual>();
@@ -524,6 +547,7 @@ public class GameManager : MonoBehaviour
 		return newPopulation;
 	}
 
+	//caprazlanacak her 2 birey icin cagrilir, 2 noktali (3 parca) caprazlama yapar
 	private Individual ReproduceChromosome(Individual individual1, Individual individual2)
 	{
 		int newLengthChromosome_1 = Random.Range(0, 1) * chromosomeLength;
@@ -548,6 +572,7 @@ public class GameManager : MonoBehaviour
 		return newIndividual;
 	}
 
+	//kromozomu mutasyona ugratir
 	private void MutateChromosome(Individual individual)
 	{
 		for (int i = 0; i < mutationCount; ++i)
@@ -556,6 +581,7 @@ public class GameManager : MonoBehaviour
 		}
 	}
 
+	//rastgele kromozom uretir
 	private Individual GenerateRandomChromosome()
 	{
 		Individual individual = new Individual(chromosomeLength, startPos);
@@ -575,6 +601,7 @@ public class GameManager : MonoBehaviour
 	}
 
 
+	//rastgele gen uretir
 	public Gene GenerateRandomGene(int muscleIndex)
 	{
 		float rotationX = Random.Range(minMoveForce, maxMoveForce);
@@ -587,7 +614,7 @@ public class GameManager : MonoBehaviour
 	}
 
 
-
+	//birey sinifi
 	public class Individual
 	{
 		int chromosomeLength;
@@ -614,6 +641,7 @@ public class GameManager : MonoBehaviour
 
 	}
 
+	//gen sinifi
 	public class Gene
 	{
 		public int muscleIndex;

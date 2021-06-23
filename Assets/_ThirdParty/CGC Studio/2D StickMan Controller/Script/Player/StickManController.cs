@@ -85,20 +85,15 @@ public class StickManController : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
+		//her bir uzvun dengesini saglar
 		foreach (_Muscle muscle in muscles)
 		{
 			muscle.ActiveMuscle();
 		}
     }
 
-	public void Balance()
-	{
-		foreach (_Muscle muscle in muscles)
-		{
-			muscle.ActiveMuscle();
-		}
-	}
 
+	//cop adama adim attirir
 	public void Step(int muscleIndex, Vector2 addForceVector)
 	{
 		if (playerHipJumpScript.Grounded)
@@ -107,6 +102,7 @@ public class StickManController : MonoBehaviour
 		}
 	}
 }
+//Uzuv/Kas sinifi
 [System.Serializable]
 public class _Muscle
 {
