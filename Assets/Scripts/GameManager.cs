@@ -436,8 +436,10 @@ public class GameManager : MonoBehaviour
 		for (int i = 0; i < chromosomeLength; ++i)
 		{
 			yield return StartCoroutine(best.Move(best.chromosome[i]));
+
 			BestReachedOfCurrentGen = best.stickman.playerHipJumpScript.transform.position.x;
 			BestScoreOfCurrentGen = (best.stickman.playerHipJumpScript.transform.position.x / 50f);
+			//BestScoreOfCurrentGen = best.fitness;
 			//moveBackgroundMasterScript.MoveAll(best.stickman.playerHipJumpScript.transform.position.x);
 			if (BestScoreOfCurrentGen > BestScoreOfAllGens)
 			{
